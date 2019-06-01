@@ -56,7 +56,7 @@ class User:
             channels[channelName] = Channel(channelName)
 
         for channel in channels:
-            if channels[channel].getUserInChannel(self):
+            if channels[channel].isUserInChannel(self):
                 await channels[channel].removeViewer(self)
 
         await channels[channelName].addViewer(self)
@@ -75,7 +75,7 @@ class User:
 
     def disconnect(self):
         for channel in channels:
-            if channels[channel].userInChannel(self):
+            if channels[channel].isUserInChannel(self):
                 channels[channel].removeViewer(self)
         print("[Info] User %s disconnected." % (self.uuid))
 
@@ -104,7 +104,7 @@ class Channel:
         else:
             return(False)
 
-    def getUserInChannel(self, user):
+    def isUserInChannel(self, user):
         if user.uuid in map(getUserUUID, self.viewers):
             return(True)
         else:
