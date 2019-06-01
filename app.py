@@ -13,7 +13,6 @@ config = json.load(open("./config.json","r"))
 
 threadCount = 0
 
-
 if config["ws"]["enabled"]:
     threadCount = threadCount + 1
     ws = threading.Thread(target=ws.init)

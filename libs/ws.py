@@ -3,44 +3,149 @@ import json
 import logging
 import websockets
 
+from uuid import uuid4 as generateUUID
+
 logging.basicConfig()
 
-users = set()
+channels = {}
 
-config = json.load(open("./config.json","r"))
+config = json.load(open("./config.json", "r"))
 
-async def register(ws):
-    users.add(ws)
+class User:
+    
+    def __init__(self,ws,name=None,uuid=None):
+        self.name = name or ""
+        self.uuid = uuid or str(generateUUID())
+        self.channel = ""
+        self.ws = ws
 
-async def unregister(ws):
-    users.remove(ws)
+    async def sendData(self,data):
+        await self.ws.send(json.dumps(data))
 
-async def sendBulletScreen(channel,user,msg):
-    if users:
-        data = json.dumps({"status":"MSG_RECV","msg":msg,"user":user,"channel":channel})
-        await asyncio.wait([user.send(data) for user in users])
+    async def sendError(self,msg=None):
+        await self.sendData({"type": "error", "msg": msg or "挖勒喔依"})
+
+    async def sendConnectedMessage(self):
+        await self.sendData({"type": "connected", "uuid" : self.uuid})
+
+    def setName(self,name):
+        self.name = name
+
+    async def sendBulletScreen(self,user,msg):
+        await self.sendData({
+            "type" : "bulletScreenMessage"
+            "msg": msg,
+            "sentFrom": user.name })
+        
+    async def receiveBulletScreen(self,msg):
+        print("[Info] Recvive message Channel : %s  User : %s  UUID : %s  Message : %s" % (
+                        self.channel, self.name , self.uuid , msg))
+        if self.channel != "":
+            for user in channels[self.channel].viewers:
+                await user.sendBulletScreen(self,msg)
+
+    def joinChannel(self,channelName):
+        if channelName not in channels:
+            channels[channelName] = Channel(channelName)
+        
+        for channel in channels:
+            if channels[channel].userInChannel(self):
+                channels[channel].removeViewer(self)
+        
+        channels[channelName].addViewer(self)
+
+        self.channel = channelName
+
+    def getChannel(self):
+        if self.channel != "":
+            return(channels[self.channel])
+        else:
+            return(None)
+
+    def disconnect(self):
+        for channel in channels:
+            if channels[channel].userInChannel(self):
+                channels[channel].removeViewer(self)
+
+class Channel:
+
+    def __init__(self,name):
+        self.name = name
+        self.viewers = []
+
+    async def broadcastChannelData(self):
+        for viewer in self.viewers:
+            await viewer.sendData(self.getChannelData())
+
+    async def addViewer(self,user):
+        if user.uuid in map(getUserUUID,self.viewers):
+            return(False)
+        else:
+            self.viewers.append(user)
+            return(True)
+    
+    async def removeViewer(self,user):
+        if user.uuid in map(getUserUUID,self.viewers):
+            self.viewers.remove(user)
+            return(True)
+        else:
+            return(False)
+
+    def getUserInChannel(self,user):
+        if user.uuid in map(getUserUUID,self.viewers):
+            return(True)
+        else:
+            return(False)
+
+    def getViewers(self):
+        return(self.viewers)
+
+    def getNowViewerCount(self):
+        return(len(self.viewers))
+
+    def getChannelData(self):
+        return({
+            "name" : self.name,
+            "nowViewerCount" : self.getNowViewerCount()
+        })
+
+def getUserUUID(user):
+    return(user.uuid)
 
 async def connect(ws, path):
-    await register(ws)
+    user = User(ws)
     try:
-        await ws.send(json.dumps({"status":"CONNECTED","msg":"Hello user."}))
+        await user.sendConnectedMessage()
         async for data in ws:
-            ws.send("Recv")
             try:
                 data = json.loads(data)
-                if "user" in data and "msg" in data:
-                    print("[Info] Recvive message Channel : %s  User : %s  Message : %s" % (data["channel"],data["user"],data["msg"]))
-                    await sendBulletScreen(data["user"],data["msg"])
-                    await ws.send(json.dumps({"status":"MSG_SENT","msg":"Message sent."}))
-                else:
-                    await ws.send(json.dumps({"status":"OEOE","msg":"Triggered"}))    
+                if "method" in data:
+                    if data["method"] == "joinChannel":
+                        if "channelName" in data:
+                            user.joinChannel(data["channelName"])
+                        else:
+                            user.sendError("missingData")
+                    elif data["method"] == "sendBulletMessage":
+                        if "msg" in data:
+                            user.receiveBulletScreen(data["msg"])
+                        else:
+                            user.sendError("missingData")
+                    elif data["method"] == "getChannelData":
+                        channel = user.getChannel()
+                        if channel == None:
+                            user.sendError("notInAnyChannel")
+                        else:
+                            user.sendData(channel.getChannelData())
+
             except:
-                await ws.send(json.dumps({"status":"OEOE","msg":"Triggered"}))
+                await user.sendError()
     finally:
-        await unregister(ws)
+        user.disconnect()
+
 
 def init():
-    print("[Info] WebSocket server started at %s:%d" % (config["ws"]["host"],config["ws"]["port"]))
+    print("[Info] WebSocket server started at %s:%d" %
+          (config["ws"]["host"], config["ws"]["port"]))
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     asyncio.get_event_loop().run_until_complete(
