@@ -66,6 +66,9 @@ class User:
         await self.sendData({"type": "channelJoined", "channel": channels[self.channel].getChannelData()})
         
         print("[Info] User %s join channel %s ." % (self.uuid,self.channel))
+        
+        for user in channels[self.channel].viewers:
+            await user.sendData(channels[self.channel].getChannelData())
 
     def getChannel(self):
         if self.channel != "":
