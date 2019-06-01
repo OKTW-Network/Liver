@@ -55,14 +55,16 @@ class User:
             channels[channelName] = Channel(channelName)
 
         for channel in channels:
-            if channels[channel].userInChannel(self):
-                channels[channel].removeViewer(self)
+            if channels[channel].getUserInChannel(self):
+                await channels[channel].removeViewer(self)
 
-        channels[channelName].addViewer(self)
+        await channels[channelName].addViewer(self)
 
         self.channel = channelName
 
-        await user.sendData({"type": "channelJoined", "channel": channels[self.channel]})
+        await self.sendData({"type": "channelJoined", "channel": channels[self.channel].getChannelData()})
+        
+        print("[Info] User %s join channel %s ." % (self.uuid,self.channel))
 
     def getChannel(self):
         if self.channel != "":
@@ -135,30 +137,32 @@ async def connect(ws, path):
                 if "method" in data:
                     if data["method"] == "joinChannel":
                         if "channelName" in data:
-                            user.joinChannel(data["channelName"])
+                            await user.joinChannel(data["channelName"])
                         else:
-                            user.sendError("missingData")
+                            await user.sendError("missingData")
                     if data["method"] == "setName":
                         if "name" in data:
-                            user.setName(data["name"])
+                            await user.setName(data["name"])
                         else:
-                            user.sendError("missingData")
+                            await user.sendError("missingData")
                     elif data["method"] == "sendBulletMessage":
                         if "msg" in data:
                             if user.getName() == "":
-                                user.sendError("nameNotSet")
+                                await user.sendError("nameNotSet")
                             else:
-                                user.receiveBulletScreen(data["msg"])
+                                await user.receiveBulletScreen(data["msg"])
                         else:
-                            user.sendError("missingData")
+                            await user.sendError("missingData")
                     elif data["method"] == "getChannelData":
                         channel = user.getChannel()
                         if channel == None:
-                            user.sendError("notInAnyChannel")
+                            await user.sendError("notInAnyChannel")
                         else:
-                            user.sendData(channel.getChannelData())
+                            await user.sendData(channel.getChannelData())
 
             except:
+                import traceback
+                traceback.print_exc()
                 await user.sendError()
     finally:
         user.disconnect()
