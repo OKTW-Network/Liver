@@ -85,7 +85,11 @@ class User:
         for channel in channels:
             if channels[channel].isUserInChannel(self):
                 await channels[channel].removeViewer(self)
+                
         print("[Info] User %s disconnected." % (self.uuid))
+
+        for user in channels[self.channel].viewers:
+            await user.sendData(channels[self.channel].getChannelData())
 
 
 class Channel:
