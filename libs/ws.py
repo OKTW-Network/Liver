@@ -34,7 +34,7 @@ class User:
 
     async def sendBulletScreen(self, user, msg):
         await self.sendData({
-            "type": "bulletScreenMessage"
+            "type": "bulletScreenMessage",
             "msg": msg,
             "sentFrom": user.name})
 
