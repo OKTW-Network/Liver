@@ -38,18 +38,19 @@ class User:
         await self.sendData({"type": "nameSet", "name": self.name})
         print("[Info] User %s set name to %s ." % (self.uuid,self.name))
 
-    async def sendBulletScreen(self, user, msg):
+    async def sendBulletScreen(self, user, msg, uuid):
         await self.sendData({
             "type": "bulletScreenMessage",
             "msg": msg,
-            "sentFrom": user.name})
+            "sentFrom": user.name,
+            "uuid": uuid})
 
     async def receiveBulletScreen(self, msg):
         print("[Info] Recvive message Channel : %s  User : %s  UUID : %s  Message : %s ." % (
             self.channel, self.name, self.uuid, msg))
         if self.channel != "":
             for user in channels[self.channel].viewers:
-                user.sendBulletScreen(self, msg)
+                await user.sendBulletScreen(self, msg, str(generateUUID()))
 
     async def joinChannel(self, channelName):
         if channelName not in channels:
