@@ -19,6 +19,7 @@ class User:
         self.uuid = uuid or str(generateUUID())
         self.channel = ""
         self.ws = ws
+        print("[Info] User %s joined." % (self.uuid))
 
     async def sendData(self, data):
         await self.ws.send(json.dumps(data))
@@ -34,6 +35,7 @@ class User:
 
     def setName(self, name):
         self.name = name
+        print("[Info] User %s set name to %s ." % (self.uuid,self.name))
 
     async def sendBulletScreen(self, user, msg):
         await self.sendData({
@@ -42,7 +44,7 @@ class User:
             "sentFrom": user.name})
 
     async def receiveBulletScreen(self, msg):
-        print("[Info] Recvive message Channel : %s  User : %s  UUID : %s  Message : %s" % (
+        print("[Info] Recvive message Channel : %s  User : %s  UUID : %s  Message : %s ." % (
             self.channel, self.name, self.uuid, msg))
         if self.channel != "":
             for user in channels[self.channel].viewers:
@@ -72,6 +74,7 @@ class User:
         for channel in channels:
             if channels[channel].userInChannel(self):
                 channels[channel].removeViewer(self)
+        print("[Info] User %s disconnected." % (self.uuid))
 
 
 class Channel:
