@@ -2,6 +2,10 @@ import asyncio
 import json
 import logging
 import websockets
+import logging
+logger = logging.getLogger('websockets')
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
 from uuid import uuid4 as generateUUID
 
@@ -77,10 +81,10 @@ class User:
         else:
             return(None)
 
-    def disconnect(self):
+    async def disconnect(self):
         for channel in channels:
             if channels[channel].isUserInChannel(self):
-                channels[channel].removeViewer(self)
+                await channels[channel].removeViewer(self)
         print("[Info] User %s disconnected." % (self.uuid))
 
 
@@ -170,7 +174,7 @@ async def connect(ws, path):
                 traceback.print_exc()
                 await user.sendError()
     finally:
-        user.disconnect()
+        await user.disconnect()
 
 
 def init():
