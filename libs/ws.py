@@ -29,6 +29,9 @@ class User:
     async def sendConnectedMessage(self):
         await self.sendData({"type": "connected", "uuid": self.uuid})
 
+    def getName(self):
+        return(self.name)
+
     def setName(self, name):
         self.name = name
 
@@ -132,9 +135,17 @@ async def connect(ws, path):
                             user.joinChannel(data["channelName"])
                         else:
                             user.sendError("missingData")
+                    if data["method"] == "setName":
+                        if "name" in data:
+                            user.setName(data["name"])
+                        else:
+                            user.sendError("missingData")
                     elif data["method"] == "sendBulletMessage":
                         if "msg" in data:
-                            user.receiveBulletScreen(data["msg"])
+                            if user.getName() == "":
+                                user.sendError("nameNotSet")
+                            else:
+                                user.receiveBulletScreen(data["msg"])
                         else:
                             user.sendError("missingData")
                     elif data["method"] == "getChannelData":
