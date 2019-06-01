@@ -33,8 +33,9 @@ class User:
     def getName(self):
         return(self.name)
 
-    def setName(self, name):
+    async def setName(self, name):
         self.name = name
+        await self.sendData({"type": "nameSet", "name": self.name})
         print("[Info] User %s set name to %s ." % (self.uuid,self.name))
 
     async def sendBulletScreen(self, user, msg):
