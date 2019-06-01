@@ -11,50 +11,53 @@ channels = {}
 
 config = json.load(open("./config.json", "r"))
 
+
 class User:
-    
-    def __init__(self,ws,name=None,uuid=None):
+
+    def __init__(self, ws, name=None, uuid=None):
         self.name = name or ""
         self.uuid = uuid or str(generateUUID())
         self.channel = ""
         self.ws = ws
 
-    async def sendData(self,data):
+    async def sendData(self, data):
         await self.ws.send(json.dumps(data))
 
-    async def sendError(self,msg=None):
+    async def sendError(self, msg=None):
         await self.sendData({"type": "error", "msg": msg or "挖勒喔依"})
 
     async def sendConnectedMessage(self):
-        await self.sendData({"type": "connected", "uuid" : self.uuid})
+        await self.sendData({"type": "connected", "uuid": self.uuid})
 
-    def setName(self,name):
+    def setName(self, name):
         self.name = name
 
-    async def sendBulletScreen(self,user,msg):
+    async def sendBulletScreen(self, user, msg):
         await self.sendData({
-            "type" : "bulletScreenMessage"
+            "type": "bulletScreenMessage"
             "msg": msg,
-            "sentFrom": user.name })
-        
-    async def receiveBulletScreen(self,msg):
+            "sentFrom": user.name})
+
+    async def receiveBulletScreen(self, msg):
         print("[Info] Recvive message Channel : %s  User : %s  UUID : %s  Message : %s" % (
-                        self.channel, self.name , self.uuid , msg))
+            self.channel, self.name, self.uuid, msg))
         if self.channel != "":
             for user in channels[self.channel].viewers:
-                await user.sendBulletScreen(self,msg)
+                await user.sendBulletScreen(self, msg)
 
-    def joinChannel(self,channelName):
+    async def joinChannel(self, channelName):
         if channelName not in channels:
             channels[channelName] = Channel(channelName)
-        
+
         for channel in channels:
             if channels[channel].userInChannel(self):
                 channels[channel].removeViewer(self)
-        
+
         channels[channelName].addViewer(self)
 
         self.channel = channelName
+
+        await user.sendData({"type": "channelJoined", "channel": channels[self.channel]})
 
     def getChannel(self):
         if self.channel != "":
@@ -67,9 +70,10 @@ class User:
             if channels[channel].userInChannel(self):
                 channels[channel].removeViewer(self)
 
+
 class Channel:
 
-    def __init__(self,name):
+    def __init__(self, name):
         self.name = name
         self.viewers = []
 
@@ -77,22 +81,22 @@ class Channel:
         for viewer in self.viewers:
             await viewer.sendData(self.getChannelData())
 
-    async def addViewer(self,user):
-        if user.uuid in map(getUserUUID,self.viewers):
+    async def addViewer(self, user):
+        if user.uuid in map(getUserUUID, self.viewers):
             return(False)
         else:
             self.viewers.append(user)
             return(True)
-    
-    async def removeViewer(self,user):
-        if user.uuid in map(getUserUUID,self.viewers):
+
+    async def removeViewer(self, user):
+        if user.uuid in map(getUserUUID, self.viewers):
             self.viewers.remove(user)
             return(True)
         else:
             return(False)
 
-    def getUserInChannel(self,user):
-        if user.uuid in map(getUserUUID,self.viewers):
+    def getUserInChannel(self, user):
+        if user.uuid in map(getUserUUID, self.viewers):
             return(True)
         else:
             return(False)
@@ -105,12 +109,15 @@ class Channel:
 
     def getChannelData(self):
         return({
-            "name" : self.name,
-            "nowViewerCount" : self.getNowViewerCount()
+            "type": "channelData",
+            "name": self.name,
+            "nowViewerCount": self.getNowViewerCount()
         })
+
 
 def getUserUUID(user):
     return(user.uuid)
+
 
 async def connect(ws, path):
     user = User(ws)
