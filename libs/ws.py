@@ -49,7 +49,7 @@ class User:
             self.channel, self.name, self.uuid, msg))
         if self.channel != "":
             for user in channels[self.channel].viewers:
-                await user.sendBulletScreen(self, msg)
+                user.sendBulletScreen(self, msg)
 
     async def joinChannel(self, channelName):
         if channelName not in channels:
