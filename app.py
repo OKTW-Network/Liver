@@ -2,6 +2,7 @@ import threading
 import os
 import sys
 import json
+import time
 
 if not os.path.exists("./config.json"):
     print("[Error] Config file not found , please copy and edit config.example.json to config.json")
@@ -24,5 +25,6 @@ while True:
     if config["ws"]["enabled"]:
         if not ws.isAlive:
             tmp = tmp - 1
+    time.sleep(1)
     if tmp == 0:
         break
